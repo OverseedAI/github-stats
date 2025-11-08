@@ -1,5 +1,6 @@
 import { authRouter } from '@/server/api/routers/auth';
 import { organizationsRouter } from '@/server/api/routers/organizations';
+import { githubRouter } from '@/server/api/routers/github';
 import { createTRPCRouter } from '@/server/api/trpc';
 
 /**
@@ -10,6 +11,7 @@ import { createTRPCRouter } from '@/server/api/trpc';
 export const appRouter = createTRPCRouter({
     auth: authRouter,
     orgs: organizationsRouter,
+    github: githubRouter,
 });
 
 // export type definition of API

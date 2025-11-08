@@ -1,0 +1,123 @@
+import { TRPCError } from '@trpc/server';
+import { eq } from 'drizzle-orm';
+import { z } from 'zod';
+
+import { insert{{properCase name_singular}}Schema, update{{properCase name_singular}}Schema } from '@/schemas';
+import {
+    checkOrganizationAccessById,
+    checkOrganizationAccessBySlug,
+} from '@/server/access';
+import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
+import { db } from '@/server/db';
+import {
+    create{{properCase name_singular}},
+    delete{{properCase name_singular}}ById,
+    get{{properCase name_plural}},
+    get{{properCase name_singular}}ById,
+    update{{properCase name_singular}}ById,
+} from '@/server/services';
+
+export const {{name_plural}}Router = createTRPCRouter({
+    getById: protectedProcedure
+        .input(z.object({ id: z.number() }))
+        .query(async ({ input, ctx }) => {
+            const {{name_singular}} = await get{{properCase name_singular}}ById(input.id);
+            const userId = ctx.session.user.id;
+
+            if (!{{name_singular}}) {
+                throw new TRPCError({ code: 'NOT_FOUND' });
+            }
+
+            await checkOrganizationAccessById(
+                {{name_singular}}.organizationId,
+                userId
+            );
+
+            return {{name_singular}};
+        }),
+
+    getMany: protectedProcedure
+        .input(
+            z.object({
+                organizationSlug: z.string(),
+            })
+        )
+        .query(async ({ input, ctx }) => {
+            const organizationSlug = input.organizationSlug;
+            const userId = ctx.session.user.id;
+
+            const organization = await checkOrganizationAccessBySlug(
+                organizationSlug,
+                userId
+            );
+
+            const {{name_plural}} = await get{{properCase name_plural}}(organization);
+
+            return {{name_plural}};
+        }),
+
+    create: protectedProcedure
+        .input(insert{{properCase name_singular}}Schema)
+        .mutation(async ({ input, ctx }) => {
+            const userId = ctx.session.user.id;
+
+            await checkOrganizationAccessById(input.organizationId, userId);
+
+            const created{{properCase name_singular}} = await create{{properCase name_singular}}(input);
+
+            return created{{properCase name_singular}};
+        }),
+
+    update: protectedProcedure
+        .input(update{{properCase name_singular}}Schema)
+        .mutation(async ({ input, ctx }) => {
+            if (!input.id) {
+                throw new TRPCError({
+                    code: 'BAD_REQUEST',
+                    message: 'Please provide the resource ID',
+                });
+            }
+
+            const found{{properCase name_singular}} = await db.query.{{name_plural}}.findFirst({
+                where: ({{name_singular}}) => eq({{name_singular}}.id, input.id!),
+            });
+
+            if (!found{{properCase name_singular}}) {
+                throw new TRPCError({ code: 'NOT_FOUND' });
+            }
+
+            await checkOrganizationAccessById(
+                found{{properCase name_singular}}.organizationId,
+                ctx.session.user.id
+            );
+
+            const updated{{properCase name_singular}} = await update{{properCase name_singular}}ById(input.id, input);
+
+            return updated{{properCase name_singular}};
+        }),
+
+    delete: protectedProcedure
+        .input(
+            z.object({
+                id: z.number(),
+            })
+        )
+        .mutation(async ({ input, ctx }) => {
+            const found{{properCase name_singular}} = await db.query.{{name_plural}}.findFirst({
+                where: ({{name_singular}}) => eq({{name_singular}}.id, input.id),
+            });
+
+            if (!found{{properCase name_singular}}) {
+                throw new TRPCError({ code: 'NOT_FOUND' });
+            }
+
+            await checkOrganizationAccessById(
+                found{{properCase name_singular}}.organizationId,
+                ctx.session.user.id
+            );
+
+            const deleted{{properCase name_singular}} = await delete{{properCase name_singular}}ById(input.id);
+
+            return deleted{{properCase name_singular}};
+        }),
+});

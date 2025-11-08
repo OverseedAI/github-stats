@@ -1,0 +1,83 @@
+import { TRPCError } from '@trpc/server';
+import { eq } from 'drizzle-orm';
+
+import {
+    type New{{properCase name_singular}},
+    type Organization,
+    type {{properCase name_singular}},
+    {{name_plural}}
+} from '@/schemas';
+import { db } from '@/server/db';
+
+export const get{{properCase name_singular}}ById = async (id: number) => {
+    const {{name_singular}} = await db.query.{{name_plural}}.findFirst({
+        where: ({{name_singular}}) => eq({{name_singular}}.id, id),
+    });
+
+    return {{name_singular}};
+};
+
+export const get{{properCase name_plural}} = async (organization: Organization) => {
+    const {{name_plural}} = await db.query.{{name_plural}}.findMany({
+        where: ({{name_singular}}) => eq({{name_singular}}.organizationId, organization.id),
+    });
+
+    return {{name_plural}};
+};
+
+export const create{{properCase name_singular}} = async (input: New{{properCase name_singular}}): Promise<{{properCase name_singular}}> => {
+    const [created{{properCase name_singular}}] = await db
+        .insert({{name_plural}})
+        .values(input)
+        .onConflictDoNothing()
+        .returning();
+
+    if (!created{{properCase name_singular}}) {
+        throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Unable to create {{name_singular}}.',
+        });
+    }
+
+    return created{{properCase name_singular}};
+};
+
+export const update{{properCase name_singular}}ById = async (id: number, input: New{{properCase name_singular}}): Promise<{{properCase name_singular}}> => {
+    if (!id) {
+        throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Id not provided for update.',
+        });
+    }
+
+    const [updated{{properCase name_singular}}] = await db
+        .update({{name_plural}})
+        .set(input)
+        .where(eq({{name_plural}}.id, id))
+        .returning();
+
+    if (!updated{{properCase name_singular}}) {
+        throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Unable to update {{name_singular}}.',
+        });
+    }
+
+    return updated{{properCase name_singular}};
+};
+
+export const delete{{properCase name_singular}}ById = async (id: number): Promise<{{properCase name_singular}}> => {
+    const [deleted{{properCase name_singular}}] = await db
+        .delete({{name_plural}})
+        .where(eq({{name_plural}}.id, id))
+        .returning();
+
+    if (!deleted{{properCase name_singular}}) {
+        throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Unable to deleted {{name_singular}}.',
+        });
+    }
+
+    return deleted{{properCase name_singular}};
+};

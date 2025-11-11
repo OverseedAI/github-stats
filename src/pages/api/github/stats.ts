@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import axios from "axios";
 import { rateLimit } from "@/lib/rate-limit";
+import { getInstallationOctokit } from "@/lib/github-app";
 
 // Rate limiter: 10 requests per 15 minutes per IP
 const limiter = rateLimit({
@@ -25,11 +25,6 @@ interface GitHubCommit {
     html_url: string;
     description: string | null;
   };
-}
-
-interface GitHubSearchResponse {
-  total_count: number;
-  items: GitHubCommit[];
 }
 
 interface GitHubStatsResponse {
@@ -104,28 +99,26 @@ export default async function handler(
     return res.status(400).json({ error: "End date is required" });
   }
 
-  // Check for GitHub token
-  const githubToken = process.env.GITHUB_TOKEN;
-  if (!githubToken) {
-    console.error("GITHUB_TOKEN is not set in environment variables");
-    return res.status(500).json({ error: "GitHub integration not configured" });
-  }
-
   try {
+    // Get GitHub App installation client
+    const octokit = await getInstallationOctokit();
+
     // Use GitHub Search API to find commits by the user
     const searchQuery = `author:${username} author-date:${startDate}..${endDate}`;
-    const searchResponse = await axios.get<GitHubSearchResponse>(
-      `https://api.github.com/search/commits?q=${encodeURIComponent(searchQuery)}&sort=author-date&order=desc&per_page=100`,
+    const searchResponse = await octokit.request(
+      "GET /search/commits",
       {
+        q: searchQuery,
+        sort: "author-date",
+        order: "desc",
+        per_page: 100,
         headers: {
           Accept: "application/vnd.github.cloak-preview+json",
-          Authorization: `token ${githubToken}`,
-          "User-Agent": "GitHub-Stats-App",
         },
       }
     );
 
-    const commits = searchResponse.data.items;
+    const commits = searchResponse.data.items as GitHubCommit[];
     const totalCommits = searchResponse.data.total_count;
 
     // Process commits for statistics
@@ -212,20 +205,31 @@ export default async function handler(
   } catch (error: unknown) {
     console.error("GitHub API error:", error);
 
-    if (axios.isAxiosError(error)) {
-      if (error.response?.status === 404) {
+    // Handle Octokit request errors
+    if (error && typeof error === "object" && "status" in error) {
+      const apiError = error as { status: number; message?: string };
+
+      if (apiError.status === 404) {
         return res.status(404).json({ error: "GitHub user not found" });
       }
 
-      if (error.response?.status === 403) {
+      if (apiError.status === 403) {
         return res.status(403).json({
           error: "GitHub API rate limit exceeded. Please try again later."
         });
       }
 
-      const errorMessage = (error.response?.data as { message?: string })?.message;
-      if (errorMessage) {
-        return res.status(error.response?.status ?? 500).json({ error: errorMessage });
+      if (apiError.message) {
+        return res.status(apiError.status).json({ error: apiError.message });
+      }
+    }
+
+    // Handle configuration errors
+    if (error instanceof Error) {
+      if (error.message.includes("Missing required GitHub App configuration")) {
+        return res.status(500).json({
+          error: "GitHub App not configured. Please contact the administrator."
+        });
       }
     }
 

@@ -8,7 +8,9 @@ export const env = createEnv({
      */
     server: {
         NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-        GITHUB_TOKEN: z.string().min(1),
+        GITHUB_APP_ID: z.string().min(1),
+        GITHUB_APP_INSTALLATION_ID: z.string().min(1),
+        GITHUB_APP_PRIVATE_KEY: z.string().min(1),
     },
 
     /**
@@ -26,7 +28,9 @@ export const env = createEnv({
      */
     runtimeEnv: {
         NODE_ENV: process.env.NODE_ENV,
-        GITHUB_TOKEN: process.env.GITHUB_TOKEN,
+        GITHUB_APP_ID: process.env.GITHUB_APP_ID,
+        GITHUB_APP_INSTALLATION_ID: process.env.GITHUB_APP_INSTALLATION_ID,
+        GITHUB_APP_PRIVATE_KEY: process.env.GITHUB_APP_PRIVATE_KEY,
     },
     /**
      * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

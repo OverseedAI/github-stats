@@ -48,6 +48,18 @@ interface GitHubStatsResponse {
     date: string;
     count: number;
   }>;
+  user: {
+    login: string;
+    name: string | null;
+    avatar_url: string;
+    bio: string | null;
+    html_url: string;
+    blog: string | null;
+    twitter_username: string | null;
+    public_repos: number;
+    followers: number;
+    following: number;
+  };
 }
 
 function getClientIp(req: NextApiRequest): string {
@@ -102,6 +114,24 @@ export default async function handler(
   try {
     // Get GitHub App installation client
     const octokit = await getInstallationOctokit();
+
+    // Fetch user profile
+    const userResponse = await octokit.request("GET /users/{username}", {
+      username,
+    });
+
+    const userProfile = {
+      login: userResponse.data.login,
+      name: userResponse.data.name,
+      avatar_url: userResponse.data.avatar_url,
+      bio: userResponse.data.bio,
+      html_url: userResponse.data.html_url,
+      blog: userResponse.data.blog,
+      twitter_username: userResponse.data.twitter_username ?? null,
+      public_repos: userResponse.data.public_repos,
+      followers: userResponse.data.followers,
+      following: userResponse.data.following,
+    };
 
     // Use GitHub Search API to find commits by the user
     const searchQuery = `author:${username} author-date:${startDate}..${endDate}`;
@@ -199,6 +229,7 @@ export default async function handler(
       },
       topRepositories,
       activityByDay,
+      user: userProfile,
     };
 
     return res.status(200).json(response);

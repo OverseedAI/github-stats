@@ -1,5 +1,6 @@
-import { ExternalLinkIcon, MoonIcon, SunIcon } from '@chakra-ui/icons';
+import { CopyIcon, ExternalLinkIcon, MoonIcon, SunIcon } from '@chakra-ui/icons';
 import {
+    Avatar,
     Badge,
     Box,
     Button,
@@ -30,12 +31,14 @@ import {
     Text,
     VStack,
     useColorMode,
+    useToast,
 } from '@chakra-ui/react';
-import { FaLinkedin, FaReddit, FaShare, FaXTwitter } from 'react-icons/fa6';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import dayjs from 'dayjs';
+import { useRouter } from 'next/router';
 import { useEffect, useMemo, useState } from 'react';
+import { FaLinkedin, FaReddit, FaShare, FaXTwitter } from 'react-icons/fa6';
 
 type DateRange = '7days' | '30days' | '90days' | '1year';
 
@@ -85,6 +88,18 @@ interface GitHubData {
         date: string;
         count: number;
     }>;
+    user: {
+        login: string;
+        name: string | null;
+        avatar_url: string;
+        bio: string | null;
+        html_url: string;
+        blog: string | null;
+        twitter_username: string | null;
+        public_repos: number;
+        followers: number;
+        following: number;
+    };
 }
 
 async function fetchGitHubCommits(
@@ -144,18 +159,29 @@ function saveRecentSearch(username: string) {
 }
 
 export default function GitHubStatsPage() {
+    const router = useRouter();
+    const { username: routeUsername, range: routeRange } = router.query;
     const { colorMode, toggleColorMode } = useColorMode();
-    const [selectedRange, setSelectedRange] = useState<DateRange>('7days');
-    const [username, setUsername] = useState('');
+    const toast = useToast();
     const [inputValue, setInputValue] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [recentSearches, setRecentSearches] = useState<string[]>([]);
     const commitsPerPage = 10;
 
-    // Load recent searches on mount
+    // Get username and date range from URL
+    const username = typeof routeUsername === 'string' ? routeUsername : '';
+    const selectedRange: DateRange =
+        typeof routeRange === 'string' && routeRange in DATE_RANGES
+            ? (routeRange as DateRange)
+            : '7days';
+
+    // Load recent searches on mount and sync input value with route
     useEffect(() => {
         setRecentSearches(getRecentSearches());
-    }, []);
+        if (username) {
+            setInputValue(username);
+        }
+    }, [username]);
 
     const { startDate, endDate } = useMemo(() => {
         const days = DATE_RANGES[selectedRange].days;
@@ -173,25 +199,60 @@ export default function GitHubStatsPage() {
         queryFn: () => fetchGitHubCommits(username, startDate, endDate),
         enabled: !!username && username.length > 0,
         retry: 1,
+        retryOnMount: false,
+        refetchOnReconnect: false,
+        keepPreviousData: false,
+        // This ensures old data doesn't show when switching users
+        staleTime: 0,
+        cacheTime: 0,
     });
-
-    console.log('username:', username.length);
 
     const handleUsernameSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (inputValue.trim()) {
             const trimmedUsername = inputValue.trim();
-            setUsername(trimmedUsername);
             setCurrentPage(1); // Reset to first page when changing username
             saveRecentSearch(trimmedUsername);
             setRecentSearches(getRecentSearches());
+            // Navigate to new username route with current date range
+            void router.push(`/github/${trimmedUsername}?range=${selectedRange}`);
         }
     };
 
     const handleRecentSearchClick = (searchUsername: string) => {
         setInputValue(searchUsername);
-        setUsername(searchUsername);
         setCurrentPage(1);
+        // Navigate to username route with current date range
+        void router.push(`/github/${searchUsername}?range=${selectedRange}`);
+    };
+
+    const handleRangeChange = (range: DateRange) => {
+        setCurrentPage(1); // Reset to first page when changing date range
+        // Update URL with new date range
+        void router.push(`/github/${username}?range=${range}`, undefined, { shallow: true });
+    };
+
+    const handleClearRecentSearches = () => {
+        if (typeof window === 'undefined') return;
+        try {
+            localStorage.removeItem(RECENT_SEARCHES_KEY);
+            setRecentSearches([]);
+            toast({
+                title: 'Cleared!',
+                description: 'Recent searches have been cleared',
+                status: 'success',
+                duration: 2000,
+                isClosable: true,
+            });
+        } catch {
+            toast({
+                title: 'Error',
+                description: 'Failed to clear recent searches',
+                status: 'error',
+                duration: 2000,
+                isClosable: true,
+            });
+        }
     };
 
     // Pagination logic for commits
@@ -213,6 +274,28 @@ export default function GitHubStatsPage() {
     const textColor = { light: 'gray.900', dark: 'gray.100' };
     const mutedColor = { light: 'gray.600', dark: 'gray.400' };
     const accentBg = { light: 'gray.100', dark: 'gray.700' };
+
+    const handleCopyUrl = async () => {
+        const currentUrl = window.location.href;
+        try {
+            await navigator.clipboard.writeText(currentUrl);
+            toast({
+                title: 'Link copied!',
+                description: 'URL has been copied to your clipboard',
+                status: 'success',
+                duration: 2000,
+                isClosable: true,
+            });
+        } catch (err) {
+            toast({
+                title: 'Failed to copy',
+                description: 'Could not copy URL to clipboard',
+                status: 'error',
+                duration: 2000,
+                isClosable: true,
+            });
+        }
+    };
 
     const handleShare = (platform: 'linkedin' | 'twitter' | 'reddit') => {
         const currentUrl = window.location.href;
@@ -239,7 +322,7 @@ export default function GitHubStatsPage() {
 
     return (
         <Box bg={bgColor[colorMode]} minH="100vh" py={8}>
-            <Container maxW="container.xl">
+            <Container maxW="800px">
                 <VStack spacing={6} align="stretch">
                     {/* Header */}
                     <HStack justify="space-between" align="start">
@@ -275,6 +358,16 @@ export default function GitHubStatsPage() {
                                     borderColor={borderColor[colorMode]}
                                     boxShadow="none"
                                 >
+                                    <MenuItem
+                                        icon={<CopyIcon />}
+                                        onClick={handleCopyUrl}
+                                        bg={cardBg[colorMode]}
+                                        color={textColor[colorMode]}
+                                        _hover={{ bg: accentBg[colorMode] }}
+                                        fontWeight="bold"
+                                    >
+                                        Copy URL
+                                    </MenuItem>
                                     <MenuItem
                                         icon={<Icon as={FaLinkedin} color="#0A66C2" />}
                                         onClick={() => handleShare('linkedin')}
@@ -411,6 +504,23 @@ export default function GitHubStatsPage() {
                                                     {searchUser}
                                                 </Button>
                                             ))}
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                color={mutedColor[colorMode]}
+                                                fontSize="xs"
+                                                boxShadow="none"
+                                                _hover={{
+                                                    color: 'red.500',
+                                                    bg: accentBg[colorMode],
+                                                }}
+                                                _active={{
+                                                    bg: accentBg[colorMode],
+                                                }}
+                                                onClick={handleClearRecentSearches}
+                                            >
+                                                Clear
+                                            </Button>
                                         </HStack>
                                     </Box>
                                 )}
@@ -418,55 +528,198 @@ export default function GitHubStatsPage() {
                         </CardBody>
                     </Card>
 
-                    {/* Date Range Selector */}
-                    <Card
-                        bg={cardBg[colorMode]}
-                        border="2px solid"
-                        borderColor={borderColor[colorMode]}
-                        boxShadow="none"
-                    >
-                        <CardBody>
-                            <HStack spacing={3} flexWrap="wrap">
-                                {(Object.keys(DATE_RANGES) as DateRange[]).map((range) => (
-                                    <Button
-                                        key={range}
-                                        size="sm"
-                                        bg={
-                                            selectedRange === range
-                                                ? textColor[colorMode]
-                                                : 'transparent'
-                                        }
-                                        color={
-                                            selectedRange === range
-                                                ? bgColor[colorMode]
-                                                : textColor[colorMode]
-                                        }
+                    {/* User Profile */}
+                    {data?.user && !error && (
+                        <Card
+                            bg={cardBg[colorMode]}
+                            border="2px solid"
+                            borderColor={borderColor[colorMode]}
+                            boxShadow="none"
+                        >
+                            <CardBody>
+                                <HStack spacing={6} align="start">
+                                    <Avatar
+                                        size="2xl"
+                                        src={data.user.avatar_url}
+                                        name={data.user.name ?? data.user.login}
                                         border="2px solid"
                                         borderColor={borderColor[colorMode]}
-                                        boxShadow="none"
-                                        _hover={{
-                                            bg:
+                                    />
+                                    <VStack align="start" spacing={3} flex={1}>
+                                        <Box>
+                                            <Heading
+                                                size="lg"
+                                                color={textColor[colorMode]}
+                                                fontWeight="bold"
+                                            >
+                                                {data.user.name ?? data.user.login}
+                                            </Heading>
+                                            <Text
+                                                color={mutedColor[colorMode]}
+                                                fontSize="md"
+                                                fontWeight="bold"
+                                            >
+                                                @{data.user.login}
+                                            </Text>
+                                        </Box>
+                                        {data.user.bio && (
+                                            <Text color={textColor[colorMode]}>
+                                                {data.user.bio}
+                                            </Text>
+                                        )}
+                                        <HStack spacing={4} flexWrap="wrap">
+                                            <HStack>
+                                                <Text
+                                                    color={textColor[colorMode]}
+                                                    fontWeight="bold"
+                                                >
+                                                    {data.user.public_repos}
+                                                </Text>
+                                                <Text color={mutedColor[colorMode]}>
+                                                    repositories
+                                                </Text>
+                                            </HStack>
+                                            <HStack>
+                                                <Text
+                                                    color={textColor[colorMode]}
+                                                    fontWeight="bold"
+                                                >
+                                                    {data.user.followers}
+                                                </Text>
+                                                <Text color={mutedColor[colorMode]}>followers</Text>
+                                            </HStack>
+                                            <HStack>
+                                                <Text
+                                                    color={textColor[colorMode]}
+                                                    fontWeight="bold"
+                                                >
+                                                    {data.user.following}
+                                                </Text>
+                                                <Text color={mutedColor[colorMode]}>following</Text>
+                                            </HStack>
+                                        </HStack>
+                                        <HStack spacing={3} flexWrap="wrap">
+                                            <Button
+                                                as={Link}
+                                                href={data.user.html_url}
+                                                isExternal
+                                                size="sm"
+                                                bg={textColor[colorMode]}
+                                                color={bgColor[colorMode]}
+                                                border="2px solid"
+                                                borderColor={borderColor[colorMode]}
+                                                boxShadow="none"
+                                                rightIcon={<ExternalLinkIcon />}
+                                                _hover={{
+                                                    bg: accentBg[colorMode],
+                                                    color: textColor[colorMode],
+                                                    textDecoration: 'none',
+                                                }}
+                                                _active={{ bg: accentBg[colorMode] }}
+                                            >
+                                                View GitHub Profile
+                                            </Button>
+                                            {data.user.blog && (
+                                                <Button
+                                                    as={Link}
+                                                    href={
+                                                        data.user.blog.startsWith('http')
+                                                            ? data.user.blog
+                                                            : `https://${data.user.blog}`
+                                                    }
+                                                    isExternal
+                                                    size="sm"
+                                                    variant="outline"
+                                                    border="2px solid"
+                                                    borderColor={borderColor[colorMode]}
+                                                    color={textColor[colorMode]}
+                                                    boxShadow="none"
+                                                    rightIcon={<ExternalLinkIcon />}
+                                                    _hover={{
+                                                        bg: accentBg[colorMode],
+                                                        textDecoration: 'none',
+                                                    }}
+                                                    _active={{ bg: accentBg[colorMode] }}
+                                                >
+                                                    Website
+                                                </Button>
+                                            )}
+                                            {data.user.twitter_username && (
+                                                <Button
+                                                    as={Link}
+                                                    href={`https://twitter.com/${data.user.twitter_username}`}
+                                                    isExternal
+                                                    size="sm"
+                                                    variant="outline"
+                                                    border="2px solid"
+                                                    borderColor={borderColor[colorMode]}
+                                                    color={textColor[colorMode]}
+                                                    boxShadow="none"
+                                                    leftIcon={<Icon as={FaXTwitter} />}
+                                                    _hover={{
+                                                        bg: accentBg[colorMode],
+                                                        textDecoration: 'none',
+                                                    }}
+                                                    _active={{ bg: accentBg[colorMode] }}
+                                                >
+                                                    @{data.user.twitter_username}
+                                                </Button>
+                                            )}
+                                        </HStack>
+                                    </VStack>
+                                </HStack>
+                            </CardBody>
+                        </Card>
+                    )}
+
+                    {/* Date Range Selector */}
+                    {data?.user && !error && (
+                        <Card
+                            bg={cardBg[colorMode]}
+                            border="2px solid"
+                            borderColor={borderColor[colorMode]}
+                            boxShadow="none"
+                        >
+                            <CardBody>
+                                <HStack spacing={3} flexWrap="wrap">
+                                    {(Object.keys(DATE_RANGES) as DateRange[]).map((range) => (
+                                        <Button
+                                            key={range}
+                                            size="sm"
+                                            bg={
                                                 selectedRange === range
                                                     ? textColor[colorMode]
-                                                    : accentBg[colorMode],
-                                        }}
-                                        _active={{
-                                            bg:
+                                                    : 'transparent'
+                                            }
+                                            color={
                                                 selectedRange === range
-                                                    ? textColor[colorMode]
-                                                    : accentBg[colorMode],
-                                        }}
-                                        onClick={() => {
-                                            setSelectedRange(range);
-                                            setCurrentPage(1); // Reset to first page when changing date range
-                                        }}
-                                    >
-                                        {DATE_RANGES[range].label}
-                                    </Button>
-                                ))}
-                            </HStack>
-                        </CardBody>
-                    </Card>
+                                                    ? bgColor[colorMode]
+                                                    : textColor[colorMode]
+                                            }
+                                            border="2px solid"
+                                            borderColor={borderColor[colorMode]}
+                                            boxShadow="none"
+                                            _hover={{
+                                                bg:
+                                                    selectedRange === range
+                                                        ? textColor[colorMode]
+                                                        : accentBg[colorMode],
+                                            }}
+                                            _active={{
+                                                bg:
+                                                    selectedRange === range
+                                                        ? textColor[colorMode]
+                                                        : accentBg[colorMode],
+                                            }}
+                                            onClick={() => handleRangeChange(range)}
+                                        >
+                                            {DATE_RANGES[range].label}
+                                        </Button>
+                                    ))}
+                                </HStack>
+                            </CardBody>
+                        </Card>
+                    )}
 
                     {/* Empty State - No Username */}
                     {(!username || username.length === 0) && !isFetching && !data && (
@@ -516,7 +769,7 @@ export default function GitHubStatsPage() {
                     )}
 
                     {/* Error State */}
-                    {error && (
+                    {error && !isFetching && (
                         <Card
                             bg={cardBg[colorMode]}
                             border="2px solid"
@@ -524,16 +777,54 @@ export default function GitHubStatsPage() {
                             boxShadow="none"
                         >
                             <CardBody>
-                                <Text color="red.500" fontWeight="bold">
-                                    Error loading GitHub data: {error.message}
-                                </Text>
+                                <Center py={8}>
+                                    <VStack spacing={3}>
+                                        <Box fontSize="4xl" color="red.500">
+                                            ⚠️
+                                        </Box>
+                                        <Heading size="md" color="red.500" fontWeight="bold">
+                                            Error Loading Profile
+                                        </Heading>
+                                        <Text color="red.500" textAlign="center" maxW="400px">
+                                            {error.message}
+                                        </Text>
+                                        <Text
+                                            color={mutedColor[colorMode]}
+                                            fontSize="sm"
+                                            textAlign="center"
+                                            maxW="400px"
+                                        >
+                                            Please check the username and try again.
+                                        </Text>
+                                    </VStack>
+                                </Center>
                             </CardBody>
                         </Card>
                     )}
 
                     {/* Data Display */}
-                    {data && (
+                    {data && !error && (
                         <>
+                            {/* Info Note */}
+                            <Card
+                                bg={accentBg[colorMode]}
+                                border="2px solid"
+                                borderColor={borderColor[colorMode]}
+                                boxShadow="none"
+                            >
+                                <CardBody py={3}>
+                                    <HStack spacing={2}>
+                                        <Text fontSize="sm" color={mutedColor[colorMode]}>
+                                            ℹ️
+                                        </Text>
+                                        <Text fontSize="sm" color={mutedColor[colorMode]}>
+                                            Stats show public repository contributions only. Private
+                                            repository contributions are not included.
+                                        </Text>
+                                    </HStack>
+                                </CardBody>
+                            </Card>
+
                             {/* Summary Stats */}
                             <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={4}>
                                 <Card
@@ -558,7 +849,7 @@ export default function GitHubStatsPage() {
                                                 {data.totalCommits}
                                             </StatNumber>
                                             <StatHelpText color={mutedColor[colorMode]}>
-                                                {DATE_RANGES[selectedRange].label.toLowerCase()}
+                                                {DATE_RANGES[selectedRange].label}
                                             </StatHelpText>
                                         </Stat>
                                     </CardBody>
@@ -786,18 +1077,21 @@ export default function GitHubStatsPage() {
                                                                 border="2px solid"
                                                                 borderColor={borderColor[colorMode]}
                                                                 width={`${widthPercent}%`}
-                                                                minW="30px"
-                                                            />
+                                                                minW="50px"
+                                                                display="flex"
+                                                                alignItems="center"
+                                                                justifyContent="flex-end"
+                                                                pr={2}
+                                                            >
+                                                                <Text
+                                                                    fontSize="sm"
+                                                                    color={bgColor[colorMode]}
+                                                                    fontWeight="bold"
+                                                                >
+                                                                    {day.count}
+                                                                </Text>
+                                                            </Box>
                                                         </Box>
-                                                        <Text
-                                                            fontSize="sm"
-                                                            color={textColor[colorMode]}
-                                                            fontWeight="bold"
-                                                            minW="30px"
-                                                            textAlign="right"
-                                                        >
-                                                            {day.count}
-                                                        </Text>
                                                     </HStack>
                                                 );
                                             })}

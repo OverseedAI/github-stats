@@ -1,5 +1,6 @@
 import { CopyIcon, ExternalLinkIcon, MoonIcon, SunIcon } from '@chakra-ui/icons';
 import {
+    Avatar,
     Badge,
     Box,
     Button,
@@ -13,6 +14,7 @@ import {
     Heading,
     Icon,
     IconButton,
+    Image,
     Input,
     InputGroup,
     InputLeftElement,
@@ -87,6 +89,18 @@ interface GitHubData {
         date: string;
         count: number;
     }>;
+    user: {
+        login: string;
+        name: string | null;
+        avatar_url: string;
+        bio: string | null;
+        html_url: string;
+        blog: string | null;
+        twitter_username: string | null;
+        public_repos: number;
+        followers: number;
+        following: number;
+    };
 }
 
 async function fetchGitHubCommits(
@@ -181,11 +195,17 @@ export default function GitHubStatsPage() {
         };
     }, [selectedRange]);
 
-    const { data, isFetching, error } = useQuery<GitHubData, Error>({
+    const { data, isFetching, error, isError } = useQuery<GitHubData, Error>({
         queryKey: ['github-commits', username, startDate, endDate],
         queryFn: () => fetchGitHubCommits(username, startDate, endDate),
         enabled: !!username && username.length > 0,
         retry: 1,
+        retryOnMount: false,
+        refetchOnReconnect: false,
+        keepPreviousData: false,
+        // This ensures old data doesn't show when switching users
+        staleTime: 0,
+        cacheTime: 0,
     });
 
     const handleUsernameSubmit = (e: React.FormEvent) => {
@@ -469,52 +489,202 @@ export default function GitHubStatsPage() {
                         </CardBody>
                     </Card>
 
-                    {/* Date Range Selector */}
-                    <Card
-                        bg={cardBg[colorMode]}
-                        border="2px solid"
-                        borderColor={borderColor[colorMode]}
-                        boxShadow="none"
-                    >
-                        <CardBody>
-                            <HStack spacing={3} flexWrap="wrap">
-                                {(Object.keys(DATE_RANGES) as DateRange[]).map((range) => (
-                                    <Button
-                                        key={range}
-                                        size="sm"
-                                        bg={
-                                            selectedRange === range
-                                                ? textColor[colorMode]
-                                                : 'transparent'
-                                        }
-                                        color={
-                                            selectedRange === range
-                                                ? bgColor[colorMode]
-                                                : textColor[colorMode]
-                                        }
+                    {/* User Profile */}
+                    {data?.user && !error && (
+                        <Card
+                            bg={cardBg[colorMode]}
+                            border="2px solid"
+                            borderColor={borderColor[colorMode]}
+                            boxShadow="none"
+                        >
+                            <CardBody>
+                                <HStack spacing={6} align="start">
+                                    <Avatar
+                                        size="2xl"
+                                        src={data.user.avatar_url}
+                                        name={data.user.name ?? data.user.login}
                                         border="2px solid"
                                         borderColor={borderColor[colorMode]}
-                                        boxShadow="none"
-                                        _hover={{
-                                            bg:
+                                    />
+                                    <VStack align="start" spacing={3} flex={1}>
+                                        <Box>
+                                            <Heading
+                                                size="lg"
+                                                color={textColor[colorMode]}
+                                                fontWeight="bold"
+                                            >
+                                                {data.user.name ?? data.user.login}
+                                            </Heading>
+                                            <Text
+                                                color={mutedColor[colorMode]}
+                                                fontSize="md"
+                                                fontWeight="bold"
+                                            >
+                                                @{data.user.login}
+                                            </Text>
+                                        </Box>
+                                        {data.user.bio && (
+                                            <Text color={textColor[colorMode]}>
+                                                {data.user.bio}
+                                            </Text>
+                                        )}
+                                        <HStack spacing={4} flexWrap="wrap">
+                                            <HStack>
+                                                <Text
+                                                    color={textColor[colorMode]}
+                                                    fontWeight="bold"
+                                                >
+                                                    {data.user.public_repos}
+                                                </Text>
+                                                <Text color={mutedColor[colorMode]}>
+                                                    repositories
+                                                </Text>
+                                            </HStack>
+                                            <HStack>
+                                                <Text
+                                                    color={textColor[colorMode]}
+                                                    fontWeight="bold"
+                                                >
+                                                    {data.user.followers}
+                                                </Text>
+                                                <Text color={mutedColor[colorMode]}>
+                                                    followers
+                                                </Text>
+                                            </HStack>
+                                            <HStack>
+                                                <Text
+                                                    color={textColor[colorMode]}
+                                                    fontWeight="bold"
+                                                >
+                                                    {data.user.following}
+                                                </Text>
+                                                <Text color={mutedColor[colorMode]}>
+                                                    following
+                                                </Text>
+                                            </HStack>
+                                        </HStack>
+                                        <HStack spacing={3} flexWrap="wrap">
+                                            <Button
+                                                as={Link}
+                                                href={data.user.html_url}
+                                                isExternal
+                                                size="sm"
+                                                bg={textColor[colorMode]}
+                                                color={bgColor[colorMode]}
+                                                border="2px solid"
+                                                borderColor={borderColor[colorMode]}
+                                                boxShadow="none"
+                                                rightIcon={<ExternalLinkIcon />}
+                                                _hover={{
+                                                    bg: accentBg[colorMode],
+                                                    color: textColor[colorMode],
+                                                    textDecoration: 'none',
+                                                }}
+                                                _active={{ bg: accentBg[colorMode] }}
+                                            >
+                                                View GitHub Profile
+                                            </Button>
+                                            {data.user.blog && (
+                                                <Button
+                                                    as={Link}
+                                                    href={
+                                                        data.user.blog.startsWith('http')
+                                                            ? data.user.blog
+                                                            : `https://${data.user.blog}`
+                                                    }
+                                                    isExternal
+                                                    size="sm"
+                                                    variant="outline"
+                                                    border="2px solid"
+                                                    borderColor={borderColor[colorMode]}
+                                                    color={textColor[colorMode]}
+                                                    boxShadow="none"
+                                                    rightIcon={<ExternalLinkIcon />}
+                                                    _hover={{
+                                                        bg: accentBg[colorMode],
+                                                        textDecoration: 'none',
+                                                    }}
+                                                    _active={{ bg: accentBg[colorMode] }}
+                                                >
+                                                    Website
+                                                </Button>
+                                            )}
+                                            {data.user.twitter_username && (
+                                                <Button
+                                                    as={Link}
+                                                    href={`https://twitter.com/${data.user.twitter_username}`}
+                                                    isExternal
+                                                    size="sm"
+                                                    variant="outline"
+                                                    border="2px solid"
+                                                    borderColor={borderColor[colorMode]}
+                                                    color={textColor[colorMode]}
+                                                    boxShadow="none"
+                                                    leftIcon={<Icon as={FaXTwitter} />}
+                                                    _hover={{
+                                                        bg: accentBg[colorMode],
+                                                        textDecoration: 'none',
+                                                    }}
+                                                    _active={{ bg: accentBg[colorMode] }}
+                                                >
+                                                    @{data.user.twitter_username}
+                                                </Button>
+                                            )}
+                                        </HStack>
+                                    </VStack>
+                                </HStack>
+                            </CardBody>
+                        </Card>
+                    )}
+
+                    {/* Date Range Selector */}
+                    {data?.user && !error && (
+                        <Card
+                            bg={cardBg[colorMode]}
+                            border="2px solid"
+                            borderColor={borderColor[colorMode]}
+                            boxShadow="none"
+                        >
+                            <CardBody>
+                                <HStack spacing={3} flexWrap="wrap">
+                                    {(Object.keys(DATE_RANGES) as DateRange[]).map((range) => (
+                                        <Button
+                                            key={range}
+                                            size="sm"
+                                            bg={
                                                 selectedRange === range
                                                     ? textColor[colorMode]
-                                                    : accentBg[colorMode],
-                                        }}
-                                        _active={{
-                                            bg:
+                                                    : 'transparent'
+                                            }
+                                            color={
                                                 selectedRange === range
-                                                    ? textColor[colorMode]
-                                                    : accentBg[colorMode],
-                                        }}
-                                        onClick={() => handleRangeChange(range)}
-                                    >
-                                        {DATE_RANGES[range].label}
-                                    </Button>
-                                ))}
-                            </HStack>
-                        </CardBody>
-                    </Card>
+                                                    ? bgColor[colorMode]
+                                                    : textColor[colorMode]
+                                            }
+                                            border="2px solid"
+                                            borderColor={borderColor[colorMode]}
+                                            boxShadow="none"
+                                            _hover={{
+                                                bg:
+                                                    selectedRange === range
+                                                        ? textColor[colorMode]
+                                                        : accentBg[colorMode],
+                                            }}
+                                            _active={{
+                                                bg:
+                                                    selectedRange === range
+                                                        ? textColor[colorMode]
+                                                        : accentBg[colorMode],
+                                            }}
+                                            onClick={() => handleRangeChange(range)}
+                                        >
+                                            {DATE_RANGES[range].label}
+                                        </Button>
+                                    ))}
+                                </HStack>
+                            </CardBody>
+                        </Card>
+                    )}
 
                     {/* Empty State - No Username */}
                     {(!username || username.length === 0) && !isFetching && !data && (
@@ -564,7 +734,7 @@ export default function GitHubStatsPage() {
                     )}
 
                     {/* Error State */}
-                    {error && (
+                    {error && !isFetching && (
                         <Card
                             bg={cardBg[colorMode]}
                             border="2px solid"
@@ -572,15 +742,37 @@ export default function GitHubStatsPage() {
                             boxShadow="none"
                         >
                             <CardBody>
-                                <Text color="red.500" fontWeight="bold">
-                                    Error loading GitHub data: {error.message}
-                                </Text>
+                                <Center py={8}>
+                                    <VStack spacing={3}>
+                                        <Box fontSize="4xl" color="red.500">
+                                            ⚠️
+                                        </Box>
+                                        <Heading
+                                            size="md"
+                                            color="red.500"
+                                            fontWeight="bold"
+                                        >
+                                            Error Loading Profile
+                                        </Heading>
+                                        <Text color="red.500" textAlign="center" maxW="400px">
+                                            {error.message}
+                                        </Text>
+                                        <Text
+                                            color={mutedColor[colorMode]}
+                                            fontSize="sm"
+                                            textAlign="center"
+                                            maxW="400px"
+                                        >
+                                            Please check the username and try again.
+                                        </Text>
+                                    </VStack>
+                                </Center>
                             </CardBody>
                         </Card>
                     )}
 
                     {/* Data Display */}
-                    {data && (
+                    {data && !error && (
                         <>
                             {/* Summary Stats */}
                             <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={4}>

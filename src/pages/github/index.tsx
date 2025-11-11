@@ -91,7 +91,7 @@ export default function GitHubLandingPage() {
 
     return (
         <Box bg={bgColor[colorMode]} minH="100vh" py={8}>
-            <Container maxW="container.xl">
+            <Container maxW="800px">
                 <VStack spacing={6} align="stretch">
                     {/* Header */}
                     <HStack justify="space-between" align="start">
@@ -263,8 +263,8 @@ export default function GitHubLandingPage() {
                                         textAlign="center"
                                         maxW="400px"
                                     >
-                                        Enter a GitHub username above to view their commit activity and
-                                        statistics
+                                        Enter a GitHub username above to view their commit activity
+                                        and statistics
                                     </Text>
                                 </VStack>
                             </Center>

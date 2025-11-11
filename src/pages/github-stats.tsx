@@ -31,11 +31,11 @@ import {
     VStack,
     useColorMode,
 } from '@chakra-ui/react';
-import { FaLinkedin, FaReddit, FaShare, FaXTwitter } from 'react-icons/fa6';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import dayjs from 'dayjs';
 import { useEffect, useMemo, useState } from 'react';
+import { FaLinkedin, FaReddit, FaShare, FaXTwitter } from 'react-icons/fa6';
 
 type DateRange = '7days' | '30days' | '90days' | '1year';
 
@@ -239,7 +239,7 @@ export default function GitHubStatsPage() {
 
     return (
         <Box bg={bgColor[colorMode]} minH="100vh" py={8}>
-            <Container maxW="container.xl">
+            <Container maxW="800px">
                 <VStack spacing={6} align="stretch">
                     {/* Header */}
                     <HStack justify="space-between" align="start">

@@ -8,16 +8,6 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-    const router = useRouter();
-    const session = useSession();
-
-    if (session.status === 'loading') {
-        return 'Loading...';
-    }
-
-    if (session.status === 'unauthenticated') {
-        void router.push('/login');
-    }
-
+    // No authentication required since we removed the backend
     return children;
 };

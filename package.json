@@ -5,8 +5,6 @@
   "type": "module",
   "scripts": {
     "build": "next build",
-    "db:push": "drizzle-kit push:pg",
-    "db:studio": "drizzle-kit studio",
     "dev": "next dev",
     "lint": "next lint",
     "start": "next start"
@@ -21,30 +19,19 @@
     "@t3-oss/env-nextjs": "^0.7.1",
     "@tanstack/react-query": "^4.36.1",
     "@tanstack/react-table": "^8.12.0",
-    "@trpc/client": "^10.45.1",
-    "@trpc/next": "^10.45.1",
-    "@trpc/react-query": "^10.45.1",
-    "@trpc/server": "^10.45.1",
     "axios": "^1.6.7",
-    "bcrypt": "^5.1.1",
-    "cookie": "^0.6.0",
     "dayjs": "^1.11.10",
-    "drizzle-orm": "^0.29.3",
-    "drizzle-zod": "^0.5.1",
     "framer-motion": "^11.0.3",
+    "lru-cache": "^11.2.2",
     "nanoid": "^5.0.5",
     "next": "^14.0.4",
-    "postgres": "^3.4.3",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "react-hook-form": "^7.50.1",
-    "superjson": "^2.2.1",
     "zod": "^3.22.4"
   },
   "devDependencies": {
     "@trivago/prettier-plugin-sort-imports": "^4.3.0",
-    "@types/bcrypt": "^5.0.2",
-    "@types/cookie": "^0.6.0",
     "@types/eslint": "^8.44.7",
     "@types/node": "^18.17.0",
     "@types/react": "^18.2.37",
@@ -52,11 +39,8 @@
     "@typescript-eslint/eslint-plugin": "^6.11.0",
     "@typescript-eslint/parser": "^6.11.0",
     "autoprefixer": "^10.4.14",
-    "drizzle-kit": "^0.20.14",
     "eslint": "^8.54.0",
     "eslint-config-next": "^14.0.4",
-    "pg": "^8.11.3",
-    "plop": "^4.0.1",
     "postcss": "^8.4.31",
     "prettier": "^3.1.0",
     "prettier-plugin-tailwindcss": "^0.5.7",
@@ -66,5 +50,5 @@
   "ct3aMetadata": {
     "initVersion": "7.26.0"
   },
-  "packageManager": "yarn@1.22.21"
+  "packageManager": "pnpm@9.0.0"
 }

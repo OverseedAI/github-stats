@@ -28,7 +28,8 @@ import {
 } from "@chakra-ui/react";
 import { ExternalLinkIcon, MoonIcon, SunIcon } from "@chakra-ui/icons";
 import dayjs from "dayjs";
-import { api } from "@/utils/api";
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
 
 type DateRange = "7days" | "30days" | "90days" | "1year";
 
@@ -42,11 +43,83 @@ const DATE_RANGES: Record<
   "1year": { label: "Last year", days: 365 },
 };
 
+interface Commit {
+  sha: string;
+  commit: {
+    author: {
+      name: string;
+      date: string;
+    };
+    message: string;
+  };
+  html_url: string;
+  repository: {
+    name: string;
+    full_name: string;
+    html_url?: string;
+    description?: string | null;
+  };
+}
+
+interface GitHubData {
+  commits: Commit[];
+  totalCommits: number;
+  summary: {
+    totalRepositories: number;
+    averageCommitsPerDay: string;
+    mostActiveDay: {
+      date: string | null;
+      count: number;
+    };
+  };
+  topRepositories: Array<{
+    name: string;
+    url: string;
+    description: string | null;
+    commitCount: number;
+  }>;
+  activityByDay: Array<{
+    date: string;
+    count: number;
+  }>;
+}
+
+async function fetchGitHubCommits(
+  username: string,
+  startDate: string,
+  endDate: string
+): Promise<GitHubData> {
+  try {
+    // Call our backend API instead of GitHub directly
+    const response = await axios.get<GitHubData>(
+      `/api/github/stats?username=${encodeURIComponent(username)}&startDate=${startDate}&endDate=${endDate}`
+    );
+
+    return response.data;
+  } catch (error: unknown) {
+    if (axios.isAxiosError(error) && error.response?.status === 404) {
+      throw new Error("GitHub user not found");
+    }
+    if (axios.isAxiosError(error) && error.response?.status === 429) {
+      throw new Error("Rate limit exceeded. Please try again later.");
+    }
+    if (axios.isAxiosError(error)) {
+      const errorMessage = (error.response?.data as { error?: string })?.error;
+      if (errorMessage) {
+        throw new Error(errorMessage);
+      }
+    }
+    throw new Error("Failed to fetch GitHub data");
+  }
+}
+
 export default function GitHubStatsPage() {
   const { colorMode, toggleColorMode } = useColorMode();
   const [selectedRange, setSelectedRange] = useState<DateRange>("7days");
   const [username, setUsername] = useState("hal-shin");
   const [inputValue, setInputValue] = useState("hal-shin");
+  const [currentPage, setCurrentPage] = useState(1);
+  const commitsPerPage = 10;
 
   const { startDate, endDate } = useMemo(() => {
     const days = DATE_RANGES[selectedRange].days;
@@ -59,10 +132,11 @@ export default function GitHubStatsPage() {
     };
   }, [selectedRange]);
 
-  const { data, isLoading, error } = api.github.getCommits.useQuery({
-    username,
-    startDate,
-    endDate,
+  const { data, isLoading, error } = useQuery<GitHubData, Error>({
+    queryKey: ["github-commits", username, startDate, endDate],
+    queryFn: () => fetchGitHubCommits(username, startDate, endDate),
+    enabled: !!username,
+    retry: 1,
   });
 
   const handleUsernameSubmit = (e: React.FormEvent) => {
@@ -370,7 +444,7 @@ export default function GitHubStatsPage() {
                         const widthPercent = (day.count / maxCommits) * 100;
 
                         return (
-                          <HStack key={day.date} spacing={4}>
+                          <HStack key={day.date} spacing={4} align="center">
                             <Text
                               fontSize="sm"
                               color={mutedColor[colorMode]}
@@ -388,19 +462,17 @@ export default function GitHubStatsPage() {
                                 borderColor={borderColor[colorMode]}
                                 width={`${widthPercent}%`}
                                 minW="30px"
-                                display="flex"
-                                alignItems="center"
-                                px={2}
-                              >
-                                <Text
-                                  fontSize="sm"
-                                  color={bgColor[colorMode]}
-                                  fontWeight="bold"
-                                >
-                                  {day.count}
-                                </Text>
-                              </Box>
+                              />
                             </Box>
+                            <Text
+                              fontSize="sm"
+                              color={textColor[colorMode]}
+                              fontWeight="bold"
+                              minW="30px"
+                              textAlign="right"
+                            >
+                              {day.count}
+                            </Text>
                           </HStack>
                         );
                       })}

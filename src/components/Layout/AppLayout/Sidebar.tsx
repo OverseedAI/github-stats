@@ -20,13 +20,12 @@ interface SidebarProps {}
 
 export const Sidebar = ({}: SidebarProps) => {
     const router = useRouter();
-    const organization = useOrganization();
 
     return (
         <Flex as="nav" flexDir="column" minWidth={280} bgColor="teal.100">
             <Box>
                 <Heading size="lg" textAlign="center" py={4}>
-                    {organization?.name}
+                    GitHub Stats
                 </Heading>
             </Box>
             <VStack align="stretch" mx={2}>
@@ -36,7 +35,7 @@ export const Sidebar = ({}: SidebarProps) => {
                         <Button
                             as={Link}
                             key={nav.url}
-                            href={`/app/${organization?.slug}` + nav.url}
+                            href={nav.url}
                             variant={IS_CURRENT_PAGE ? 'solid' : 'ghost'}
                             colorScheme="blue"
                         >

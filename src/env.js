@@ -8,16 +8,7 @@ export const env = createEnv({
      */
     server: {
         NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-        PORT: z.preprocess(Number, z.number()),
-        PRODUCTION_URL: z.string().url(),
-
-        POSTGRES_USER: z.string(),
-        POSTGRES_PASSWORD: z.string(),
-        POSTGRES_HOST: z.string(),
-        POSTGRES_PORT: z.preprocess(Number, z.number()),
-        POSTGRES_DB: z.string(),
-
-        BREVO_API_KEY: z.string(),
+        GITHUB_TOKEN: z.string().min(1),
     },
 
     /**
@@ -35,16 +26,7 @@ export const env = createEnv({
      */
     runtimeEnv: {
         NODE_ENV: process.env.NODE_ENV,
-        PORT: process.env.PORT ?? 3000,
-        PRODUCTION_URL: process.env.PRODUCTION_URL ?? 'https://prospr.bandh.ca', // TODO: CHANGE ME
-
-        POSTGRES_USER: process.env.POSTGRES_USER,
-        POSTGRES_PASSWORD: process.env.POSTGRES_PASSWORD,
-        POSTGRES_HOST: process.env.POSTGRES_HOST,
-        POSTGRES_PORT: process.env.POSTGRES_PORT,
-        POSTGRES_DB: process.env.POSTGRES_DB,
-
-        BREVO_API_KEY: process.env.BREVO_API_KEY,
+        GITHUB_TOKEN: process.env.GITHUB_TOKEN,
     },
     /**
      * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

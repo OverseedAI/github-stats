@@ -1,13 +1,12 @@
 import dayjs from 'dayjs';
 
-import { env } from '@/env';
 import { capitalize } from '@/utils/text';
 
 const APP_NAME = 'prospr'; // TODO: CHANGE ME
 
 export const config = {
     APP_NAME,
-    APP_URL: process.env.NODE_ENV === 'development' ? `http://localhost:3000` : env.PRODUCTION_URL,
+    APP_URL: process.env.NODE_ENV === 'development' ? `http://localhost:3000` : 'https://prospr.bandh.ca',
     COOKIE_EXPIRY_DURATION: dayjs().day(30),
     COOKIE_AUTH_NAME: `${APP_NAME}_session`,
 

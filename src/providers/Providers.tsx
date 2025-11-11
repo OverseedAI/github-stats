@@ -1,5 +1,5 @@
 import { ChakraProvider } from '@chakra-ui/react';
-import { type Dict } from '@chakra-ui/utils';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React, { Suspense } from 'react';
 
 import { Loading } from '@/components';
@@ -10,12 +10,16 @@ interface ProvidersProps {
     children: React.ReactNode;
 }
 
+const queryClient = new QueryClient();
+
 export const Providers = ({ children }: ProvidersProps) => {
     return (
-        <SessionProvider>
-            <ChakraProvider theme={theme as Dict}>
-                <Suspense fallback={<Loading full />}>{children}</Suspense>
-            </ChakraProvider>
-        </SessionProvider>
+        <QueryClientProvider client={queryClient}>
+            <SessionProvider>
+                <ChakraProvider theme={theme}>
+                    <Suspense fallback={<Loading full />}>{children}</Suspense>
+                </ChakraProvider>
+            </SessionProvider>
+        </QueryClientProvider>
     );
 };

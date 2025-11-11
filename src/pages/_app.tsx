@@ -2,7 +2,6 @@ import { type AppType } from 'next/app';
 
 import { Providers } from '@/providers/Providers';
 import '@/styles/globals.css';
-import { api } from '@/utils/api';
 
 const MyApp: AppType = ({ Component, pageProps: { ...pageProps } }) => {
     return (
@@ -12,4 +11,4 @@ const MyApp: AppType = ({ Component, pageProps: { ...pageProps } }) => {
     );
 };
 
-export default api.withTRPC(MyApp);
+export default MyApp;

@@ -5,7 +5,7 @@ export default function Home() {
     const router = useRouter();
 
     useEffect(() => {
-        void router.replace('/github-stats');
+        void router.replace('/github');
     }, [router]);
 
     return null;

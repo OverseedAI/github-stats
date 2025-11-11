@@ -127,7 +127,7 @@ export default async function handler(
       bio: userResponse.data.bio,
       html_url: userResponse.data.html_url,
       blog: userResponse.data.blog,
-      twitter_username: userResponse.data.twitter_username,
+      twitter_username: userResponse.data.twitter_username ?? null,
       public_repos: userResponse.data.public_repos,
       followers: userResponse.data.followers,
       following: userResponse.data.following,

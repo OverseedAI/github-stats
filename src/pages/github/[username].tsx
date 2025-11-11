@@ -14,7 +14,6 @@ import {
     Heading,
     Icon,
     IconButton,
-    Image,
     Input,
     InputGroup,
     InputLeftElement,
@@ -34,12 +33,12 @@ import {
     useColorMode,
     useToast,
 } from '@chakra-ui/react';
-import { FaLinkedin, FaReddit, FaShare, FaXTwitter } from 'react-icons/fa6';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import dayjs from 'dayjs';
-import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
+import { useEffect, useMemo, useState } from 'react';
+import { FaLinkedin, FaReddit, FaShare, FaXTwitter } from 'react-icons/fa6';
 
 type DateRange = '7days' | '30days' | '90days' | '1year';
 
@@ -195,7 +194,7 @@ export default function GitHubStatsPage() {
         };
     }, [selectedRange]);
 
-    const { data, isFetching, error, isError } = useQuery<GitHubData, Error>({
+    const { data, isFetching, error } = useQuery<GitHubData, Error>({
         queryKey: ['github-commits', username, startDate, endDate],
         queryFn: () => fetchGitHubCommits(username, startDate, endDate),
         enabled: !!username && username.length > 0,
@@ -231,6 +230,29 @@ export default function GitHubStatsPage() {
         setCurrentPage(1); // Reset to first page when changing date range
         // Update URL with new date range
         void router.push(`/github/${username}?range=${range}`, undefined, { shallow: true });
+    };
+
+    const handleClearRecentSearches = () => {
+        if (typeof window === 'undefined') return;
+        try {
+            localStorage.removeItem(RECENT_SEARCHES_KEY);
+            setRecentSearches([]);
+            toast({
+                title: 'Cleared!',
+                description: 'Recent searches have been cleared',
+                status: 'success',
+                duration: 2000,
+                isClosable: true,
+            });
+        } catch {
+            toast({
+                title: 'Error',
+                description: 'Failed to clear recent searches',
+                status: 'error',
+                duration: 2000,
+                isClosable: true,
+            });
+        }
     };
 
     // Pagination logic for commits
@@ -300,7 +322,7 @@ export default function GitHubStatsPage() {
 
     return (
         <Box bg={bgColor[colorMode]} minH="100vh" py={8}>
-            <Container maxW="container.xl">
+            <Container maxW="800px">
                 <VStack spacing={6} align="stretch">
                     {/* Header */}
                     <HStack justify="space-between" align="start">
@@ -482,6 +504,23 @@ export default function GitHubStatsPage() {
                                                     {searchUser}
                                                 </Button>
                                             ))}
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                color={mutedColor[colorMode]}
+                                                fontSize="xs"
+                                                boxShadow="none"
+                                                _hover={{
+                                                    color: 'red.500',
+                                                    bg: accentBg[colorMode],
+                                                }}
+                                                _active={{
+                                                    bg: accentBg[colorMode],
+                                                }}
+                                                onClick={handleClearRecentSearches}
+                                            >
+                                                Clear
+                                            </Button>
                                         </HStack>
                                     </Box>
                                 )}
@@ -547,9 +586,7 @@ export default function GitHubStatsPage() {
                                                 >
                                                     {data.user.followers}
                                                 </Text>
-                                                <Text color={mutedColor[colorMode]}>
-                                                    followers
-                                                </Text>
+                                                <Text color={mutedColor[colorMode]}>followers</Text>
                                             </HStack>
                                             <HStack>
                                                 <Text
@@ -558,9 +595,7 @@ export default function GitHubStatsPage() {
                                                 >
                                                     {data.user.following}
                                                 </Text>
-                                                <Text color={mutedColor[colorMode]}>
-                                                    following
-                                                </Text>
+                                                <Text color={mutedColor[colorMode]}>following</Text>
                                             </HStack>
                                         </HStack>
                                         <HStack spacing={3} flexWrap="wrap">
@@ -747,11 +782,7 @@ export default function GitHubStatsPage() {
                                         <Box fontSize="4xl" color="red.500">
                                             ⚠️
                                         </Box>
-                                        <Heading
-                                            size="md"
-                                            color="red.500"
-                                            fontWeight="bold"
-                                        >
+                                        <Heading size="md" color="red.500" fontWeight="bold">
                                             Error Loading Profile
                                         </Heading>
                                         <Text color="red.500" textAlign="center" maxW="400px">
@@ -774,6 +805,26 @@ export default function GitHubStatsPage() {
                     {/* Data Display */}
                     {data && !error && (
                         <>
+                            {/* Info Note */}
+                            <Card
+                                bg={accentBg[colorMode]}
+                                border="2px solid"
+                                borderColor={borderColor[colorMode]}
+                                boxShadow="none"
+                            >
+                                <CardBody py={3}>
+                                    <HStack spacing={2}>
+                                        <Text fontSize="sm" color={mutedColor[colorMode]}>
+                                            ℹ️
+                                        </Text>
+                                        <Text fontSize="sm" color={mutedColor[colorMode]}>
+                                            Stats show public repository contributions only. Private
+                                            repository contributions are not included.
+                                        </Text>
+                                    </HStack>
+                                </CardBody>
+                            </Card>
+
                             {/* Summary Stats */}
                             <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={4}>
                                 <Card
@@ -798,7 +849,7 @@ export default function GitHubStatsPage() {
                                                 {data.totalCommits}
                                             </StatNumber>
                                             <StatHelpText color={mutedColor[colorMode]}>
-                                                {DATE_RANGES[selectedRange].label.toLowerCase()}
+                                                {DATE_RANGES[selectedRange].label}
                                             </StatHelpText>
                                         </Stat>
                                     </CardBody>

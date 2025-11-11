@@ -15,6 +15,7 @@ import {
     Text,
     VStack,
     useColorMode,
+    useToast,
 } from '@chakra-ui/react';
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
@@ -35,6 +36,7 @@ function getRecentSearches(): string[] {
 export default function GitHubLandingPage() {
     const router = useRouter();
     const { colorMode, toggleColorMode } = useColorMode();
+    const toast = useToast();
     const [inputValue, setInputValue] = useState('');
     const [recentSearches, setRecentSearches] = useState<string[]>([]);
 
@@ -55,6 +57,29 @@ export default function GitHubLandingPage() {
     const handleRecentSearchClick = (searchUsername: string) => {
         // Navigate to username route
         void router.push(`/github/${searchUsername}`);
+    };
+
+    const handleClearRecentSearches = () => {
+        if (typeof window === 'undefined') return;
+        try {
+            localStorage.removeItem(RECENT_SEARCHES_KEY);
+            setRecentSearches([]);
+            toast({
+                title: 'Cleared!',
+                description: 'Recent searches have been cleared',
+                status: 'success',
+                duration: 2000,
+                isClosable: true,
+            });
+        } catch {
+            toast({
+                title: 'Error',
+                description: 'Failed to clear recent searches',
+                status: 'error',
+                duration: 2000,
+                isClosable: true,
+            });
+        }
     };
 
     const bgColor = { light: 'white', dark: 'gray.900' };
@@ -189,6 +214,23 @@ export default function GitHubLandingPage() {
                                                     {searchUser}
                                                 </Button>
                                             ))}
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                color={mutedColor[colorMode]}
+                                                fontSize="xs"
+                                                boxShadow="none"
+                                                _hover={{
+                                                    color: 'red.500',
+                                                    bg: accentBg[colorMode],
+                                                }}
+                                                _active={{
+                                                    bg: accentBg[colorMode],
+                                                }}
+                                                onClick={handleClearRecentSearches}
+                                            >
+                                                Clear
+                                            </Button>
                                         </HStack>
                                     </Box>
                                 )}

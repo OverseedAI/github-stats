@@ -11,11 +11,16 @@ import {
     Divider,
     HStack,
     Heading,
+    Icon,
     IconButton,
     Input,
     InputGroup,
     InputLeftElement,
     Link,
+    Menu,
+    MenuButton,
+    MenuItem,
+    MenuList,
     SimpleGrid,
     Spinner,
     Stat,
@@ -26,6 +31,7 @@ import {
     VStack,
     useColorMode,
 } from '@chakra-ui/react';
+import { FaLinkedin, FaReddit, FaShare, FaXTwitter } from 'react-icons/fa6';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import dayjs from 'dayjs';
@@ -208,6 +214,29 @@ export default function GitHubStatsPage() {
     const mutedColor = { light: 'gray.600', dark: 'gray.400' };
     const accentBg = { light: 'gray.100', dark: 'gray.700' };
 
+    const handleShare = (platform: 'linkedin' | 'twitter' | 'reddit') => {
+        const currentUrl = window.location.href;
+        const shareText = username
+            ? `Check out ${username}'s GitHub activity stats!`
+            : 'Check out this GitHub Activity Dashboard!';
+
+        let shareUrl = '';
+
+        switch (platform) {
+            case 'linkedin':
+                shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(currentUrl)}`;
+                break;
+            case 'twitter':
+                shareUrl = `https://twitter.com/intent/tweet?url=${encodeURIComponent(currentUrl)}&text=${encodeURIComponent(shareText)}`;
+                break;
+            case 'reddit':
+                shareUrl = `https://reddit.com/submit?url=${encodeURIComponent(currentUrl)}&title=${encodeURIComponent(shareText)}`;
+                break;
+        }
+
+        window.open(shareUrl, '_blank', 'noopener,noreferrer');
+    };
+
     return (
         <Box bg={bgColor[colorMode]} minH="100vh" py={8}>
             <Container maxW="container.xl">
@@ -227,17 +256,66 @@ export default function GitHubStatsPage() {
                                 Overview of your recent contributions and commit activity
                             </Text>
                         </Box>
-                        <IconButton
-                            aria-label="Toggle dark mode"
-                            icon={colorMode === 'light' ? <MoonIcon /> : <SunIcon />}
-                            onClick={toggleColorMode}
-                            variant="outline"
-                            border="2px solid"
-                            borderColor={borderColor[colorMode]}
-                            boxShadow="none"
-                            _hover={{ bg: accentBg[colorMode] }}
-                            _active={{ bg: accentBg[colorMode] }}
-                        />
+                        <HStack spacing={2}>
+                            <Menu>
+                                <MenuButton
+                                    as={IconButton}
+                                    aria-label="Share"
+                                    icon={<Icon as={FaShare} />}
+                                    variant="outline"
+                                    border="2px solid"
+                                    borderColor={borderColor[colorMode]}
+                                    boxShadow="none"
+                                    _hover={{ bg: accentBg[colorMode] }}
+                                    _active={{ bg: accentBg[colorMode] }}
+                                />
+                                <MenuList
+                                    bg={cardBg[colorMode]}
+                                    border="2px solid"
+                                    borderColor={borderColor[colorMode]}
+                                    boxShadow="none"
+                                >
+                                    <MenuItem
+                                        icon={<Icon as={FaLinkedin} color="#0A66C2" />}
+                                        onClick={() => handleShare('linkedin')}
+                                        bg={cardBg[colorMode]}
+                                        color={textColor[colorMode]}
+                                        _hover={{ bg: accentBg[colorMode] }}
+                                    >
+                                        Share on LinkedIn
+                                    </MenuItem>
+                                    <MenuItem
+                                        icon={<Icon as={FaXTwitter} />}
+                                        onClick={() => handleShare('twitter')}
+                                        bg={cardBg[colorMode]}
+                                        color={textColor[colorMode]}
+                                        _hover={{ bg: accentBg[colorMode] }}
+                                    >
+                                        Share on X
+                                    </MenuItem>
+                                    <MenuItem
+                                        icon={<Icon as={FaReddit} color="#FF4500" />}
+                                        onClick={() => handleShare('reddit')}
+                                        bg={cardBg[colorMode]}
+                                        color={textColor[colorMode]}
+                                        _hover={{ bg: accentBg[colorMode] }}
+                                    >
+                                        Share on Reddit
+                                    </MenuItem>
+                                </MenuList>
+                            </Menu>
+                            <IconButton
+                                aria-label="Toggle dark mode"
+                                icon={colorMode === 'light' ? <MoonIcon /> : <SunIcon />}
+                                onClick={toggleColorMode}
+                                variant="outline"
+                                border="2px solid"
+                                borderColor={borderColor[colorMode]}
+                                boxShadow="none"
+                                _hover={{ bg: accentBg[colorMode] }}
+                                _active={{ bg: accentBg[colorMode] }}
+                            />
+                        </HStack>
                     </HStack>
 
                     {/* Username Input */}
